@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tap for Hearts</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400&display=swap');
+
+:root {
+  box-sizing: border-box;
+  --hint: #c0547a;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+*, *::before, *::after { box-sizing: inherit; }
+html, body { height: 100%; margin: 0; }
+
+body {
+  background: #b8d8f0;
+  font-family: 'Lato', system-ui, sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+/* ── Background ── */
+#bg {
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 90% 70% at 20% 20%, rgba(180,220,255,.9)  0%, transparent 60%),
+    radial-gradient(ellipse 80% 60% at 80% 15%, rgba(255,200,220,.85) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 60% at 10% 80%, rgba(255,182,210,.8)  0%, transparent 55%),
+    radial-gradient(ellipse 80% 70% at 85% 85%, rgba(160,210,255,.8)  0%, transparent 55%),
+    linear-gradient(135deg, #aed9f5 0%, #f5c6dc 50%, #b8dff8 100%);
+  z-index: 0;
+}
+#bg::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 85% 85% at 50% 50%, transparent 45%, rgba(180,140,190,.18) 100%);
+}
+
+#petals { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+#stage {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 14px; z-index: 2;
+}
+
+/* ── Char wrap glow ── */
+#char-wrap {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+#char-wrap::before {
+  content: '';
+  position: absolute;
+  width: min(100vw, 70vh, 480px);
+  height: min(100vw, 70vh, 480px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,200,240,.28) 0%, transparent 70%);
+  animation: pulse-glow 3.2s ease-in-out infinite;
+}
+@keyframes pulse-glow {
+  0%,100% { transform: scale(1);   opacity: .7; }
+  50%      { transform: scale(1.1); opacity: 1;  }
+}
+
+/* ── Angel character (photo + wings + halo) ── */
+#char {
+  width: min(82vw, 56vh, 360px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: 50% 60%;
+  filter: drop-shadow(0 6px 22px rgba(160,100,200,.22));
+}
+#char.pop { animation: pop .35s ease; }
+@keyframes pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.07) rotate(-2deg); }
+  100% { transform: scale(1); }
+}
+
+/* Halo */
+#angel-halo {
+  width: 54%;
+  height: 18px;
+  border-radius: 50%;
+  border: 7px solid #f8d040;
+  box-shadow: 0 0 16px 4px rgba(255,220,50,.7), 0 0 32px 8px rgba(255,200,0,.3);
+  margin-bottom: -9px;
+  position: relative; z-index: 3;
+  animation: halo-pulse 2.8s ease-in-out infinite;
+}
+@keyframes halo-pulse {
+  0%,100% { box-shadow: 0 0 16px 4px rgba(255,220,50,.7),  0 0 32px  8px rgba(255,200,0,.3); }
+  50%      { box-shadow: 0 0 26px 8px rgba(255,230,80,.95), 0 0 52px 14px rgba(255,210,0,.5); }
+}
+
+/* Photo + wings row */
+#angel-photo-wrap {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+/* Circular portrait */
+#angel-photo {
+  width: 60%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 15%;
+  border: 5px solid #fff;
+  box-shadow: 0 4px 24px rgba(200,100,150,.35), 0 0 0 3px rgba(255,220,240,.6);
+  position: relative; z-index: 2;
+}
+
+/* Wings */
+.angel-wing {
+  position: absolute;
+  top: 4%;
+  width: 42%;
+  height: 92%;
+  z-index: 1;
+}
+.angel-wing.left {
+  right: 58%;
+  transform-origin: 100% 38%;
+  animation: flap-left 0.68s ease-in-out infinite alternate;
+}
+.angel-wing.right {
+  left: 58%;
+  transform-origin: 0% 38%;
+  animation: flap-right 0.68s ease-in-out infinite alternate;
+}
+
+/* Flap: wings beat up (compress vertically, tilt) then open down */
+@keyframes flap-left {
+  0%   { transform: scaleY(1)   scaleX(1)    rotate(-5deg); }
+  45%  { transform: scaleY(.45) scaleX(.88)  rotate(8deg);  }
+  100% { transform: scaleY(.78) scaleX(1.04) rotate(3deg);  }
+}
+@keyframes flap-right {
+  0%   { transform: scaleY(1)   scaleX(1)    rotate(5deg);  }
+  45%  { transform: scaleY(.45) scaleX(.88)  rotate(-8deg); }
+  100% { transform: scaleY(.78) scaleX(1.04) rotate(-3deg); }
+}
+
+/* Robe / sash hem below photo */
+#angel-robe {
+  width: 64%;
+  height: 24px;
+  margin-top: -5px;
+  position: relative; z-index: 2;
+  background: linear-gradient(180deg, #fff8fc 0%, #f4b8d8 100%);
+  border-radius: 0 0 50% 50%;
+  box-shadow: 0 4px 12px rgba(220,100,160,.18);
+  animation: robe-sway 3.4s ease-in-out infinite;
+}
+@keyframes robe-sway {
+  0%,100% { transform: rotate(-1.2deg); }
+  50%      { transform: rotate(1.5deg); }
+}
+
+/* ── Hint text ── */
+#hint-wrap {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+}
+#title-text {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-style: italic;
+  font-size: clamp(18px, 4vw, 26px);
+  color: #9b2d5a;
+  letter-spacing: .06em;
+  text-shadow: 0 0 16px rgba(255,160,200,.5), 0 2px 6px rgba(255,255,255,.4);
+}
+#hint {
+  color: var(--hint);
+  font-size: 13px; font-weight: 300;
+  letter-spacing: .08em;
+  text-shadow: 0 0 8px rgba(255,200,220,.5);
+}
+#count { font-weight: 400; color: #c0406a; }
+
+/* ── Milestone label ── */
+#milestone {
+  position: fixed; left: 50%; top: 16%;
+  transform: translateX(-50%);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(16px, 4.5vw, 28px); font-style: italic;
+  color: #7b1740; letter-spacing: .1em;
+  pointer-events: none; opacity: 0;
+  text-shadow: 0 0 16px rgba(255,160,200,.7), 0 2px 4px rgba(255,255,255,.5);
+  z-index: 25; white-space: nowrap;
+}
+#milestone.show { animation: milestone-fade 2.8s ease-in-out forwards; }
+@keyframes milestone-fade {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(10px) scale(.9); }
+  20%  { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1);  }
+  75%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+}
+
+/* ── Floating hearts ── */
+.h {
+  position: fixed; pointer-events: none;
+  width: var(--s); height: var(--s);
+  margin: calc(var(--s)/-2) 0 0 calc(var(--s)/-2);
+  animation: fly var(--d) ease-out forwards; z-index: 9;
+}
+@keyframes fly {
+  0%   { opacity: 0; transform: translate(0,0) scale(.2) rotate(0); }
+  15%  { opacity: 1; transform: translate(calc(var(--x)*.2),-20px) scale(1.15) rotate(calc(var(--r)*.3)); }
+  100% { opacity: 0; transform: translate(var(--x),var(--y)) scale(.8) rotate(var(--r)); }
+}
+
+/* ── Big milestone heart ── */
+.big {
+  position: fixed; left: 50%; top: 50%;
+  width: min(80vw, 60vh, 360px); height: min(80vw, 60vh, 360px);
+  margin: calc(min(80vw,60vh,360px)/-2) 0 0 calc(min(80vw,60vh,360px)/-2);
+  pointer-events: none; z-index: 20;
+  animation: big 2.6s ease-in-out forwards;
+  filter: drop-shadow(0 0 30px rgba(232,16,80,.6)) drop-shadow(0 0 60px rgba(255,100,150,.3));
+}
+@keyframes big {
+  0%   { opacity: 0; transform: scale(.08) rotate(-15deg); }
+  18%  { opacity: 1; transform: scale(1.2) rotate(5deg); }
+  30%  { transform: scale(.93) rotate(-2deg); }
+  45%  { transform: scale(1.08) rotate(2deg); }
+  60%  { transform: scale(1); }
+  82%  { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+
+/* ── Corner decorations ── */
+.corner-deco {
+  position: fixed; width: 90px; height: 90px;
+  opacity: .18; z-index: 1; pointer-events: none;
+}
+.corner-deco.tl { top:-10px; left:-10px; transform:rotate(0deg); }
+.corner-deco.tr { top:-10px; right:-10px; transform:rotate(90deg); }
+.corner-deco.bl { bottom:-10px; left:-10px; transform:rotate(270deg); }
+.corner-deco.br { bottom:-10px; right:-10px; transform:rotate(180deg); }
+</style>
+</head>
+<body>
+
+<div id="bg"></div>
+<canvas id="petals"></canvas>
+
+<!-- Corner hearts -->
+<svg class="corner-deco tl" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 90 Q10 10 90 10" stroke="#f9d0dc" stroke-width="2" fill="none"/>
+  <path d="M50 20 C30 0 10 10 18 30 C25 48 50 48 50 48 C50 48 75 48 82 30 C90 10 70 0 50 20Z" fill="#e8101c" opacity=".7"/>
+</svg>
+<svg class="corner-deco tr" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 90 Q10 10 90 10" stroke="#f9d0dc" stroke-width="2" fill="none"/>
+  <path d="M50 20 C30 0 10 10 18 30 C25 48 50 48 50 48 C50 48 75 48 82 30 C90 10 70 0 50 20Z" fill="#e8101c" opacity=".7"/>
+</svg>
+<svg class="corner-deco bl" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 90 Q10 10 90 10" stroke="#f9d0dc" stroke-width="2" fill="none"/>
+  <path d="M50 20 C30 0 10 10 18 30 C25 48 50 48 50 48 C50 48 75 48 82 30 C90 10 70 0 50 20Z" fill="#e8101c" opacity=".7"/>
+</svg>
+<svg class="corner-deco br" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 90 Q10 10 90 10" stroke="#f9d0dc" stroke-width="2" fill="none"/>
+  <path d="M50 20 C30 0 10 10 18 30 C25 48 50 48 50 48 C50 48 75 48 82 30 C90 10 70 0 50 20Z" fill="#e8101c" opacity=".7"/>
+</svg>
+
+<div id="milestone">&#9829; With all my heart &#9829;</div>
+
+<div id="stage">
+  <div id="char-wrap">
+
+    <!-- Angel: halo + flapping wings + photo circle + robe -->
+    <div id="char">
+
+      <!-- Golden halo -->
+      <div id="angel-halo"></div>
+
+      <!-- Wings + portrait row -->
+      <div id="angel-photo-wrap">
+
+        <!-- LEFT WING -->
+        <svg class="angel-wing left" viewBox="0 0 120 300" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="wL2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stop-color="#ffffff"/>
+              <stop offset="30%"  stop-color="#ddeeff"/>
+              <stop offset="100%" stop-color="#80b8f0"/>
+            </linearGradient>
+          </defs>
+          <!-- feather mass -->
+          <path d="M114 38
+                   C 92 26  52 20  18 36
+                   C  2 46   0 68  10 88
+                   C 22 110  58 116  90 104
+                   C 68 118  46 138  40 160
+                   C 34 182  46 202  68 198
+                   C 92 194 114 170 120 148
+                   C112 164 108 186 116 200
+                   C122 214 118 202 118 188
+                   C120 170 118 144 114 122
+                   Z"
+                fill="url(#wL2)" stroke="#88b8e8" stroke-width="1.5" opacity=".94"/>
+          <!-- quill lines -->
+          <path d="M112 50 C82 38 46 36 18 46"    fill="none" stroke="#b8d8f8" stroke-width="2"   opacity=".68"/>
+          <path d="M110 70 C80 58 46 56 20 66"    fill="none" stroke="#b8d8f8" stroke-width="2"   opacity=".62"/>
+          <path d="M108 92 C80 82 50 80 28 90"    fill="none" stroke="#b8d8f8" stroke-width="1.8" opacity=".56"/>
+          <path d="M106 116 C82 106 58 106 40 116" fill="none" stroke="#b8d8f8" stroke-width="1.6" opacity=".50"/>
+          <path d="M110 140 C90 132 70 134 56 144" fill="none" stroke="#b8d8f8" stroke-width="1.5" opacity=".44"/>
+          <path d="M114 164 C98 158 82 160 70 168" fill="none" stroke="#b8d8f8" stroke-width="1.4" opacity=".38"/>
+          <!-- edge shimmer -->
+          <path d="M10 88 C22 110 58 116 90 104 C68 118 46 138 40 160 C34 182 46 202 68 198 C92 194 114 170 120 148"
+                fill="none" stroke="#fff" stroke-width="2" opacity=".48"/>
+        </svg>
+
+        <!-- Circular portrait of the person -->
+        <img id="angel-photo" src="an.jpg" alt="Love angel"/>
+
+        <!-- RIGHT WING (mirrored shape) -->
+        <svg class="angel-wing right" viewBox="0 0 120 300" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="wR2" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stop-color="#ffffff"/>
+              <stop offset="30%"  stop-color="#ddeeff"/>
+              <stop offset="100%" stop-color="#80b8f0"/>
+            </linearGradient>
+          </defs>
+          <path d="M  6 38
+                   C 28 26  68 20 102 36
+                   C118 46 120 68 110 88
+                   C 98 110  62 116  30 104
+                   C 52 118  74 138  80 160
+                   C 86 182  74 202  52 198
+                   C 28 194   6 170   0 148
+                   C  8 164  12 186   4 200
+                   C -2 214   2 202   2 188
+                   C  0 170   2 144   6 122
+                   Z"
+                fill="url(#wR2)" stroke="#88b8e8" stroke-width="1.5" opacity=".94"/>
+          <path d="M  8 50 C 38 38  74 36 102 46"   fill="none" stroke="#b8d8f8" stroke-width="2"   opacity=".68"/>
+          <path d="M 10 70 C 40 58  74 56 100 66"   fill="none" stroke="#b8d8f8" stroke-width="2"   opacity=".62"/>
+          <path d="M 12 92 C 40 82  70 80  92 90"   fill="none" stroke="#b8d8f8" stroke-width="1.8" opacity=".56"/>
+          <path d="M 14 116 C 38 106  62 106  80 116" fill="none" stroke="#b8d8f8" stroke-width="1.6" opacity=".50"/>
+          <path d="M 10 140 C 30 132  50 134  64 144" fill="none" stroke="#b8d8f8" stroke-width="1.5" opacity=".44"/>
+          <path d="M  6 164 C 22 158  38 160  50 168" fill="none" stroke="#b8d8f8" stroke-width="1.4" opacity=".38"/>
+          <path d="M110 88 C98 110 62 116 30 104 C52 118 74 138 80 160 C86 182 74 202 52 198 C28 194 6 170 0 148"
+                fill="none" stroke="#fff" stroke-width="2" opacity=".48"/>
+        </svg>
+
+      </div><!-- /angel-photo-wrap -->
+
+      <!-- Robe hem -->
+      <div id="angel-robe"></div>
+
+    </div><!-- /#char -->
+
+  </div><!-- /#char-wrap -->
+
+  <div id="hint-wrap">
+    <div id="title-text">Tap to send your love</div>
+    <div id="hint"><span id="count">0</span> hearts &middot; tap anywhere</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var n = 0;
+  var ch = document.getElementById('char');
+  var ct = document.getElementById('count');
+  var ms = document.getElementById('milestone');
+
+  var BIG_HEART_EVERY = 25;
+
+  var milestoneMessages = [
+    '\u2665 With all my heart \u2665',
+    '\u2661 You are so loved \u2661',
+    '\u2665 Forever & always \u2665',
+    '\u2661 My heart is yours \u2661',
+    '\u2665 Love multiplied \u2665',
+  ];
+
+  var cols = [
+    '#e8101c','#e84080','#ff6b9d',
+    '#ffb3c6','#ff4d7a','#c2004e',
+    '#85c8f0','#a0d4f5','#ff85a1',
+    '#ffd6e4','#6baed6'
+  ];
+
+  function heartSvg(c, shine) {
+    return '<svg viewBox="0 0 24 24" width="100%" height="100%">'
+      + '<path d="M12 21s-8-5.2-9.3-10.2C1.8 7 4.2 4 7.4 4c2 0 3.6 1 4.6 2.6C13 5 14.6 4 16.6 4c3.2 0 5.6 3 4.7 6.8C20 15.8 12 21 12 21z" fill="' + c + '"/>'
+      + (shine ? '<path d="M6.5 8.2c.4-1.2 1.4-1.8 2.4-1.8" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".7"/>' : '')
+      + '</svg>';
+  }
+
+  function burst(x, y, extra) {
+    var k = (extra ? 14 : 6) + Math.floor(Math.random() * 5);
+    for (var i = 0; i < k; i++) {
+      var e = document.createElement('div');
+      e.className = 'h';
+      e.style.left = x + 'px';
+      e.style.top  = y + 'px';
+      var sz = (extra ? 24 : 16) + Math.random() * (extra ? 36 : 26);
+      e.style.setProperty('--s', sz + 'px');
+      e.style.setProperty('--x', ((Math.random() - .5) * (extra ? 340 : 200)) + 'px');
+      e.style.setProperty('--y', (-(extra ? 130 : 80) - Math.random() * (extra ? 260 : 180)) + 'px');
+      e.style.setProperty('--r', ((Math.random() - .5) * 80) + 'deg');
+      e.style.setProperty('--d', (1 + Math.random() * 1.1) + 's');
+      e.innerHTML = heartSvg(cols[Math.floor(Math.random() * cols.length)], Math.random() > .5);
+      document.body.appendChild(e);
+      (function (el) { setTimeout(function () { el.remove(); }, 2300); }(e));
+    }
+  }
+
+  function bigHeart() {
+    var b = document.createElement('div');
+    b.className = 'big';
+    b.innerHTML = heartSvg('#e8101c', true);
+    document.body.appendChild(b);
+    for (var i = 0; i < 6; i++) {
+      burst(
+        innerWidth  / 2 + (Math.random() - .5) * 260,
+        innerHeight / 2 + (Math.random() - .5) * 260,
+        true
+      );
+    }
+    var msg = milestoneMessages[Math.floor((n / BIG_HEART_EVERY - 1)) % milestoneMessages.length];
+    ms.textContent = msg;
+    ms.classList.remove('show');
+    void ms.getBoundingClientRect();
+    ms.classList.add('show');
+    setTimeout(function () { b.remove(); }, 2700);
+    try { if (navigator.vibrate) navigator.vibrate([30, 50, 30]); } catch (e) {}
+  }
+
+  document.addEventListener('pointerdown', function (ev) {
+    n += 1;
+    ct.textContent = n;
+    burst(ev.clientX, ev.clientY, false);
+    if (n % BIG_HEART_EVERY === 0) bigHeart();
+    ch.classList.remove('pop');
+    void ch.getBoundingClientRect();
+    ch.classList.add('pop');
+    try { if (navigator.vibrate) navigator.vibrate(10); } catch (e) {}
+  });
+
+  // Ambient floating hearts
+  (function () {
+    var canvas = document.getElementById('petals');
+    var ctx = canvas.getContext('2d');
+    var W, H, particles = [];
+
+    function resize() {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function Particle() { this.reset(true); }
+    Particle.prototype.reset = function (initial) {
+      this.x  = Math.random() * W;
+      this.y  = initial ? Math.random() * H : H + 20;
+      this.sz = 4 + Math.random() * 10;
+      this.vx = (Math.random() - .5) * .6;
+      this.vy = -(0.4 + Math.random() * 0.7);
+      this.alpha = 0;
+      this.targetAlpha = .08 + Math.random() * .14;
+      this.drift = Math.random() * Math.PI * 2;
+      this.driftSpeed = .008 + Math.random() * .012;
+      this.col = cols[Math.floor(Math.random() * cols.length)];
+    };
+
+    for (var i = 0; i < 28; i++) particles.push(new Particle());
+
+    function drawHeart(ctx, cx, cy, size, alpha, color) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(cx, cy);
+      ctx.scale(size / 10, size / 10);
+      ctx.beginPath();
+      ctx.moveTo(0, -3);
+      ctx.bezierCurveTo(-5, -8, -10, -4, -10, 0);
+      ctx.bezierCurveTo(-10, 5, 0, 10, 0, 13);
+      ctx.bezierCurveTo(0, 10, 10, 5, 10, 0);
+      ctx.bezierCurveTo(10, -4, 5, -8, 0, -3);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function loop() {
+      ctx.clearRect(0, 0, W, H);
+      particles.forEach(function (p) {
+        p.drift += p.driftSpeed;
+        p.x += p.vx + Math.sin(p.drift) * .4;
+        p.y += p.vy;
+        if (p.alpha < p.targetAlpha) p.alpha = Math.min(p.alpha + .004, p.targetAlpha);
+        drawHeart(ctx, p.x, p.y, p.sz, p.alpha, p.col);
+        if (p.y < -20) p.reset(false);
+      });
+      requestAnimationFrame(loop);
+    }
+    loop();
+  }());
+}());
+</script>
+</body>
+</html>
